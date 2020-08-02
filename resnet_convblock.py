@@ -50,33 +50,75 @@ class BatchNormLayer:
 class ConvBlock:
     """
     """
-    def __init__(self, in_channels, conv_layers, stride=2, activatiob=tf.nn.relu):
+    def __init__(self, in_channels=3, layer_sizes=[64, 64, 256], stride=2, activation=tf.nn.relu):
         self.session = None
-        self.f = tf.nn.relu
+        self.activation = activation
+        self.input_ = tf.placeholder(tf.float32, shape=(1, 224, 224, in_channels))
 
         # init main branch
-        self.conv1 = ConvLayer(1, 1, in_channels, con_layers[0], stride)
-        self.bn1   = BatchNormLayer(conv_layers[0])
-        self.conv2 = ConvLayer(3, 3, con_layers[0], con_layers[1], 1, 'SAME')
-        self.bn1   = BatchNormLayer(conv_layers[0])
-        self.conv1 = ConvLayer(1, 1, con_layers[1], con_layers[2], 1)
-        self.bn1   = BatchNormLayer(conv_layers[0])
+        self.conv1 = ConvLayer(1, 1, in_channels, layer_sizes[0], stride)
+        self.bn1   = BatchNormLayer(layer_sizes[0])
+        self.conv2 = ConvLayer(3, 3, layer_sizes[0], layer_sizes[1], 1, 'SAME')
+        self.bn2   = BatchNormLayer(layer_sizes[0])
+        self.conv3 = ConvLayer(1, 1, layer_sizes[1], layer_sizes[2], 1)
+        self.bn3   = BatchNormLayer(layer_sizes[2])
+
+        # init shortcut branch
+        self.convs = ConvLayer(1, 1, in_channels, layer_sizes[2], stride)
+        self.bns   = BatchNormLayer(layer_sizes[2])
+        
+    def forward(self, X):
+        # main branch
+        main_X = self.conv1.forward(X)
+        main_X = self.bn1.forward(main_X)
+        main_X = self.activation(main_X)
+        
+        main_X = self.conv2.forward(main_X)
+        main_X = self.bn2.forward(main_X)
+        main_X = self.activation(main_X)
+        
+        main_X = self.conv3.forward(main_X)
+        main_X = self.bn3.forward(main_X)
+        
+        # shortcut branch
+        shortcut_X = self.convs.forward(X)
+        shortcut_X = self.bns.forward(shortcut_X)
+        
+        return self.activation(main_X + shortcut_X)
 
     def predict(self, X):
-      pass
-
+        if self.session:
+            return self.session.run(
+                self.forward(self.input_),
+                feed_dict={self.input_: X})
+        else:
+            print("Session is not active!")
+    
+    # def set_session(self, session):
+    #     # need to make this a session
+    #     # so assignment happens on sublayers too
+    #     self.session = session
+    #     self.conv1.session = session
+    #     self.bn1.session = session
+    #     self.conv2.session = session
+    #     self.bn2.session = session
+    #     self.conv3.session = session
+    #     self.bn3.session = session
+    #     self.convs.session = session
+    #     self.bns.session = session
 
 if __name__ == '__main__':
-  conv_block = ConvBlock()
+    conv_block = ConvBlock()
 
 
-  # make a fake image
-  X = np.random.random((1, 224, 224, 3))
+    # make a fake image
+    X = np.random.random((5, 224, 224, 3))
 
-  init = tf.global_variables_initializer()
-  with tf.Session() as session:
-    conv_block.session = session
-    session.run(init)
+    init = tf.global_variables_initializer()
+    with tf.Session() as session:
+        #conv_block.set_session(session)
+        conv_block.session = session
+        session.run(init)
 
-    output = conv_block.predict(X):
-    print("output.shape:", output.shape)
+        output = conv_block.predict(X)
+        print("output.shape:", output.shape)

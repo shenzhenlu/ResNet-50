@@ -20,7 +20,7 @@ class IdentityBlock:
         self.conv3 = ConvLayer(1, 1, layer_sizes[1], layer_sizes[2], 1)
         self.bn3  = BatchNormLayer(layer_sizes[2])
         
-        self.layer = [
+        self.layers = [
                 self.conv1, self.bn1,
                 self.conv2, self.bn2,
                 self.conv3, self.bn3
